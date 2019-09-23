@@ -24,11 +24,13 @@ OUTPUT_WIDTH = 740
 OUTPUT_HEIGHT = 555
 PADDING = 2
 
-parser = argparse.ArgumentParser(description='Webcam Test')
+parser = argparse.ArgumentParser(description='Images from dir Test')
 parser.add_argument('-t', '--tracker', dest='tracker', required=True,
                     help='Name of the tracker [SiamFC, SiamRPN, SiamMask]')
 parser.add_argument('-d', '--dir', dest='images_dir', required=True,
                     help='Path to the directory containing the images')
+parser.add_argument('-p', '--prefix_img_name', dest='img_prefix', required=False, default='rgb_',
+                    help='Characters before the image ID in the name of the image file')
 parser.add_argument('--vanilla', action='store_true',
                     help='run the tracker without memory')
 parser.add_argument('-v', '--viz', action='store_true',
@@ -82,9 +84,9 @@ def show_images(images, tracker, mirror=False, viz=False):
     global initialize
 
     # vs = cv2.VideoCapture(0)
-    cv2.namedWindow('Webcam', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('Webcam', OUTPUT_WIDTH, OUTPUT_HEIGHT)
-    cv2.setMouseCallback('Webcam', on_mouse, 0)
+    cv2.namedWindow('Images', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Images', OUTPUT_WIDTH, OUTPUT_HEIGHT)
+    cv2.setMouseCallback('Images', on_mouse, 0)
 
     outputBoxToDraw = None
     bbox = None
@@ -138,7 +140,7 @@ def show_images(images, tracker, mirror=False, viz=False):
                     cv2.putText(im, text, (10, OUTPUT_HEIGHT - ((i * 20) + 20)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
-        cv2.imshow("Webcam", im)
+        cv2.imshow("Images", im)
 
         # check for escape key
         key = cv2.waitKey(1)
@@ -176,9 +178,11 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"Tracker {args.tracker} does not exist.")
 
-    filenames = glob.glob(args.images_dir+"/*.jpg")
-    filenames.sort()
-    images = [cv2.imread(img) for img in filenames]
+    filenames = glob.glob(args.images_dir+"/*.png")
+    nb_chars_prefix = len(args.img_prefix)
+    filenames_ids = [int(file.split('/')[-1][len(args):-4]) for file in filenames]
+    filenames_ids.sort()
+    images = [cv2.imread(args.images_dir+'/'+args.img_prefix+str(filename_id)+'.png') for filename_id in filenames_ids]
 
     print("[INFO] Starting video stream.")
     show_images(images,tracker, mirror=True, viz=args.viz)
