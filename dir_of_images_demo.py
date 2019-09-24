@@ -100,12 +100,22 @@ def show_images(images_paths, tracker, mirror=False, viz=False):
     mask = []
 
     # Stay on first image until bounding box is added
+    im = cv2.imread(images_paths[0])
+    if mirror:
+            im = cv2.flip(im, 1)
 
     # loop over video stream ims
-    for im_path in images_paths[1:]:
-        im = cv2.imread(im_path)
-        # while True:
-        # _, im = vs.read()
+    done = False
+    initial_bb_selected = False
+    nb_images_seen = 0
+    while not done:
+        if not initial_bb_selected:
+            im = cv2.imread(images_paths[0])
+        else:
+            nb_images_seen += 1
+            im = cv2.imread(images_paths[nb_images_seen])
+            if (nb_images_seen == len(images_paths)-1):
+                done = True
 
         if mirror:
             im = cv2.flip(im, 1)
@@ -122,6 +132,7 @@ def show_images(images_paths, tracker, mirror=False, viz=False):
                 state = tracker.setup(im, init_pos, init_sz)
                 initialize = False
                 fps = FPS().start()
+                initial_bb_selected = True
             else:
                 state = tracker.track(im, state)
                 location = cxy_wh_2_rect(
