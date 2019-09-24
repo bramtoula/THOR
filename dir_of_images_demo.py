@@ -22,8 +22,8 @@ RED = [0, 0, 255]
 YELLOW = [0, 255, 255]
 np.set_printoptions(precision=6, suppress=True)
 
-OUTPUT_WIDTH = 740
-OUTPUT_HEIGHT = 555
+OUTPUT_WIDTH = 640
+OUTPUT_HEIGHT = 480
 PADDING = 2
 
 parser = argparse.ArgumentParser(description='Images from dir Test')
@@ -99,6 +99,8 @@ def show_images(images_paths, tracker, mirror=False, viz=False):
     state = None
     mask = []
 
+    bounding_boxes = []
+
     # Stay on first image until bounding box is added
     im = cv2.imread(images_paths[0])
     if mirror:
@@ -112,9 +114,10 @@ def show_images(images_paths, tracker, mirror=False, viz=False):
         if not initial_bb_selected:
             im = cv2.imread(images_paths[0])
         else:
-            nb_images_seen += 1
             im = cv2.imread(images_paths[nb_images_seen])
-            if (nb_images_seen == len(images_paths)-1):
+            nb_images_seen += 1
+
+            if (nb_images_seen == len(images_paths)):
                 done = True
 
         if mirror:
@@ -138,6 +141,7 @@ def show_images(images_paths, tracker, mirror=False, viz=False):
                 location = cxy_wh_2_rect(
                     state['target_pos'], state['target_sz'])
                 (cx, cy, w, h) = [int(l) for l in location]
+                bounding_boxes.append(location)
 
                 fps.update()
                 fps.stop()
@@ -169,6 +173,7 @@ def show_images(images_paths, tracker, mirror=False, viz=False):
 
     # release the pointer
     cv2.destroyAllWindows()
+    return bounding_boxes
 
 
 def load_cfg(args):
@@ -180,6 +185,13 @@ def load_cfg(args):
     cfg = json.load(open(json_path))
     return cfg
 
+
+def generate_label_file(output_dir, bounding_boxes, images_paths):
+    results_path = output_dir+'/results_tracking.txt'
+    with open(results_path, 'w') as f:
+        for i in range(len(images_paths)):
+            (cx, cy, w, h) = bounding_boxes[i]
+            f.write(images_paths[i].split('/')[-1].strip('.png')+" 1.0 "+str(cx-w/2)+' '+str(cy-h/2)+' '+str(cx+w/2)+' '+str(cy+h/2)+'\n')
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -209,4 +221,12 @@ if __name__ == '__main__':
                                str(filename_id)+'.png' for filename_id in filenames_ids]
 
     print("[INFO] Starting video stream.")
-    show_images(images_paths, tracker, mirror=True, viz=args.viz)
+    bounding_boxes = show_images(images_paths, tracker, mirror=True, viz=args.viz)
+
+    output_dir = args.images_dir+'_tracked_boxes'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    generate_label_file(output_dir,bounding_boxes,images_paths)
+        
+
