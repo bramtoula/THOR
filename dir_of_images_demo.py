@@ -5,7 +5,9 @@
 # --------------------------------------------------------
 
 import pdb
-import argparse, cv2, os
+import argparse
+import cv2
+import os
 import numpy as np
 import sys
 from imutils.video import FPS
@@ -46,11 +48,12 @@ mousedown = False
 mouseupdown = False
 initialize = False
 
+
 def on_mouse(event, x, y, flags, params):
     global mousedown, mouseupdown, drawnBox, boxToDraw, initialize, boxToDraw_xywh
     if event == cv2.EVENT_LBUTTONDOWN:
-        drawnBox[[0,2]] = x
-        drawnBox[[1,3]] = y
+        drawnBox[[0, 2]] = x
+        drawnBox[[1, 3]] = y
         mousedown = True
         mouseupdown = False
     elif mousedown and event == cv2.EVENT_MOUSEMOVE:
@@ -67,6 +70,7 @@ def on_mouse(event, x, y, flags, params):
     boxToDraw[[1, 3]] = np.sort(boxToDraw[[1, 3]])
     boxToDraw_xywh = xyxy_to_xywh(boxToDraw)
 
+
 def bb_on_im(im, location, mask):
     location = [int(l) for l in location]  #
 
@@ -80,7 +84,8 @@ def bb_on_im(im, location, mask):
 
     return im
 
-def show_images(images, tracker, mirror=False, viz=False):
+
+def show_images(images_paths, tracker, mirror=False, viz=False):
     global initialize
 
     # vs = cv2.VideoCapture(0)
@@ -94,9 +99,12 @@ def show_images(images, tracker, mirror=False, viz=False):
     state = None
     mask = []
 
+    # Stay on first image until bounding box is added
+
     # loop over video stream ims
-    for im in images:
-    # while True:
+    for im_path in images_paths[1:]:
+        im = cv2.imread(im_path)
+        # while True:
         # _, im = vs.read()
 
         if mirror:
@@ -116,7 +124,8 @@ def show_images(images, tracker, mirror=False, viz=False):
                 fps = FPS().start()
             else:
                 state = tracker.track(im, state)
-                location = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
+                location = cxy_wh_2_rect(
+                    state['target_pos'], state['target_sz'])
                 (cx, cy, w, h) = [int(l) for l in location]
 
                 fps.update()
@@ -144,11 +153,12 @@ def show_images(images, tracker, mirror=False, viz=False):
 
         # check for escape key
         key = cv2.waitKey(1)
-        if key==27 or key==1048603:
+        if key == 27 or key == 1048603:
             break
 
     # release the pointer
     cv2.destroyAllWindows()
+
 
 def load_cfg(args):
     json_path = f"configs/{args.tracker}/VOT2018_"
@@ -158,6 +168,7 @@ def load_cfg(args):
         json_path += f"THOR_{args.lb_type}.json"
     cfg = json.load(open(json_path))
     return cfg
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -180,9 +191,11 @@ if __name__ == '__main__':
 
     filenames = glob.glob(args.images_dir+"/*.png")
     nb_chars_prefix = len(args.img_prefix)
-    filenames_ids = [int(file.split('/')[-1][len(args):-4]) for file in filenames]
+    filenames_ids = [int(file.split('/')[-1][nb_chars_prefix:-4])
+                     for file in filenames]
     filenames_ids.sort()
-    images = [cv2.imread(args.images_dir+'/'+args.img_prefix+str(filename_id)+'.png') for filename_id in filenames_ids]
+    images_paths = [args.images_dir+'/'+args.img_prefix +
+                               str(filename_id)+'.png' for filename_id in filenames_ids]
 
     print("[INFO] Starting video stream.")
-    show_images(images,tracker, mirror=True, viz=args.viz)
+    show_images(images_paths, tracker, mirror=True, viz=args.viz)
